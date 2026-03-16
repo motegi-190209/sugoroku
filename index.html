@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>生協すごろく - クイズマス</title>
     <style>
         body {
@@ -15,94 +16,119 @@
             height: 100vh;
             overflow: hidden;
             text-align: center;
+            /* スマホでの誤操作（ズームや選択）を防止 */
+            touch-action: manipulation;
+            user-select: none;
         }
         #display-container {
             position: relative;
-            width: 80%;
-            padding: 60px 40px;
-            border: 10px solid #f1c40f;
-            border-radius: 40px;
+            width: 90%; /* スマホ向けに少し広げる */
+            max-width: 800px;
+            padding: 40px 20px;
+            border: 8px solid #f1c40f;
+            border-radius: 30px;
             background-color: #2c3e50;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.7);
             transition: border-color 0.3s ease;
+            z-index: 10;
         }
-        .label { font-size: 2.2rem; color: #f1c40f; margin-bottom: 20px; font-weight: bold; letter-spacing: 2px; }
+        .label { font-size: 1.5rem; color: #f1c40f; margin-bottom: 15px; font-weight: bold; letter-spacing: 2px; }
         .content { 
-            font-size: 4.5rem; 
-            line-height: 1.3; 
+            font-size: 2.5rem; /* スマホ向けに可変に調整 */
+            line-height: 1.4; 
             font-weight: bold; 
-            min-height: 200px; 
+            min-height: 180px; 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
             justify-content: center; 
+            word-break: break-all;
         }
         
+        /* PCなどの広い画面では大きく表示 */
+        @media (min-width: 768px) {
+            .label { font-size: 2.2rem; }
+            .content { font-size: 4.5rem; min-height: 250px; }
+            #display-container { padding: 60px 40px; border-width: 10px; }
+        }
+
+        /* 画面左右のタッチエリア（見えないけどタップに反応する） */
+        .touch-zone {
+            position: fixed; top: 0; height: 100%; z-index: 5;
+        }
+        #prev-zone { left: 0; width: 30%; } /* 左30%は戻る */
+        #next-zone { right: 0; width: 70%; } /* 右70%は次へ */
+
         #force-quit-btn {
             position: fixed;
-            bottom: 20px;
+            bottom: 70px; /* スマホガイドの上に来るように */
             right: 20px;
-            padding: 10px 15px;
-            background: rgba(231, 76, 60, 0.4);
+            padding: 12px 18px;
+            background: rgba(231, 76, 60, 0.8);
             color: white;
-            border: 1px solid rgba(231, 76, 60, 0.5);
+            border: 1px solid rgba(255,255,255,0.3);
             border-radius: 8px;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.9rem;
             display: none;
+            z-index: 20;
         }
-        #force-quit-btn:hover { background: #e74c3c; }
 
         #history-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); display: none; flex-direction: column;
-            padding: 60px; box-sizing: border-box; overflow-y: auto; z-index: 100;
+            padding: 30px; box-sizing: border-box; overflow-y: auto; z-index: 100;
         }
-        .history-section-title { font-size: 1.8rem; color: #f1c40f; margin: 40px 0 20px; text-align: left; border-bottom: 2px solid #f1c40f; }
-        .history-item { margin-bottom: 25px; text-align: left; border-left: 5px solid #7f8c8d; padding-left: 20px; }
-        .history-q { font-size: 1.4rem; color: #ecf0f1; }
-        .history-a { font-size: 1.8rem; color: #f1c40f; font-weight: bold; }
-        .history-hint { color: #95a5a6; position: sticky; top: 0; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; }
+        .history-section-title { font-size: 1.5rem; color: #f1c40f; margin: 30px 0 15px; text-align: left; border-bottom: 2px solid #f1c40f; }
+        .history-item { margin-bottom: 20px; text-align: left; border-left: 5px solid #7f8c8d; padding-left: 15px; }
+        .history-q { font-size: 1.1rem; color: #ecf0f1; }
+        .history-a { font-size: 1.3rem; color: #f1c40f; font-weight: bold; }
 
-        .footer-guide { position: fixed; bottom: 20px; width: 100%; color: #7f8c8d; font-size: 1rem; pointer-events: none; }
+        .footer-guide { 
+            position: fixed; bottom: 20px; width: 100%; color: #7f8c8d; 
+            font-size: 0.9rem; pointer-events: none; z-index: 20;
+        }
     </style>
 </head>
 <body>
+
+<div id="prev-zone" class="touch-zone" onclick="handleBack()"></div>
+<div id="next-zone" class="touch-zone" onclick="handleNext()"></div>
 
 <div id="display-container">
     <div id="label" class="label">GAME START</div>
     <div id="content" class="content">生協すごろく<br>クイズマス</div>
 </div>
 
-<button id="force-quit-btn" onclick="jumpToFinish()">【終了】全員ゴール済みの場合</button>
+<button id="force-quit-btn" onclick="jumpToFinish(event)">【終了】全員ゴール済み</button>
 
-<div id="history-overlay">
-    <div class="history-hint">履歴を閉じるには [Esc] を押してください</div>
+<div id="history-overlay" onclick="closeHistory()">
+    <div style="color:#95a5a6; margin-bottom:10px;">画面をタップして閉じる</div>
     <div id="history-list"></div>
 </div>
 
 <div id="footer-guide" class="footer-guide">
-    [Enter]: 次へ / [Backspace]: ひとつ前へ
+    右側をタップ: 次へ / 左側をタップ: 戻る
 </div>
 
 <script>
     const quizData = [
         { q: "マッチとライター。先に発明されたのはどちらでしょう？", a: "ライター" },
-        { q: "いわゆるMARCHのうち、現在大学生協がない大学はいくつあるでしょう？", a: "3つ" },
-        { q: "多くの提灯をさげた竹竿を稲穂に見立て、高く掲げて街を練り歩く、夏の秋田の風物詩はなんでしょう？", a: "あきた竿燈まつり" },
-        { q: "秋田大学では原則として、2年次から3年次への進級要件として課されているのはTOEICのスコア何点以上でしょう？", a: "400" },
-        { q: "秋田大学生協ではレンタカーや旅行の予約をすることができる。○か×か。", a: "○" },
-        { q: "coopleでは本や雑誌を買うとポイントがつきますが、会計の何%のポイントがつくでしょう？", a: "10%" },
-        { q: "「笑って★ダチエル」を開催しているのは、なんという組織でしょう？", a: "秋田大学生協学生委員会" },
-        { q: "災害などで、電気の供給が止まることを停電といいますが、水の供給が止まることを何と言うでしょう？", a: "断水" },
-        { q: "日本一高い山は何でしょう？", a: "富士山" }
+        { q: "MARCHのうち、現在大学生協がない大学はいくつ？", a: "3つ" },
+        { q: "稲穂に見立てた夏の秋田の風物詩は？", a: "あきた竿燈まつり" },
+        { q: "秋田大学で進級要件となるTOEICのスコアは？", a: "400点" },
+        { q: "大学生協でレンタカーや旅行の予約ができる。○か×か。", a: "○" },
+        { q: "coopleで本を買うと何%のポイントがつく？", a: "10%" },
+        { q: "「笑って★ダチエル」を開催している組織は？", a: "秋田大学生協学生委員会" },
+        { q: "電気は停電。水の供給が止まることは？", a: "断水" },
+        { q: "日本一高い山は何？", a: "富士山" }
     ];
 
     let questions = [];
     let currentIndex = 0;
-    let phase = 0; // 0:START, 1:COVER, 2:QUESTION, 3:ANSWER, 4:FINISH
+    let phase = 0; 
     let isHistoryOpen = false;
-    let maxReachedIndex = -1; // どこまで出題したかを記録
+    let maxReachedIndex = -1;
 
     function shuffle(array) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -118,6 +144,7 @@
     }
 
     function handleNext() {
+        if (isHistoryOpen) return;
         if (phase === 0) { phase = 1; }
         else if (phase === 1) { phase = 2; maxReachedIndex = Math.max(maxReachedIndex, currentIndex); }
         else if (phase === 2) { phase = 3; }
@@ -125,14 +152,13 @@
             if (currentIndex < questions.length - 1) {
                 currentIndex++;
                 phase = 1;
-            } else {
-                phase = 4;
-            }
+            } else { phase = 4; }
         }
         updateDisplay();
     }
 
     function handleBack() {
+        if (isHistoryOpen) return;
         if (phase === 1) {
             if (currentIndex > 0) { currentIndex--; phase = 3; }
             else { phase = 0; }
@@ -143,8 +169,9 @@
         updateDisplay();
     }
 
-    function jumpToFinish() {
-        if(confirm("まだ問題が残っていますが、終了画面へ移動しますか？")) {
+    function jumpToFinish(e) {
+        if (e) e.stopPropagation(); // 背後の次へボタンが反応するのを防ぐ
+        if(confirm("残りの問題を飛ばして終了画面へ移動しますか？")) {
             phase = 4;
             updateDisplay();
         }
@@ -168,22 +195,19 @@
             labelEl.innerText = "READY";
             contentEl.innerText = `第 ${currentIndex + 1} 問`;
             container.style.borderColor = "#f1c40f";
-            footerEl.style.display = "block";
         } else if (phase === 2) {
             labelEl.innerText = `第 ${currentIndex + 1} 問：問題`;
             contentEl.innerText = questions[currentIndex].q;
             container.style.borderColor = "#3498db";
-            footerEl.style.display = "block";
         } else if (phase === 3) {
             labelEl.innerText = `第 ${currentIndex + 1} 問：解答`;
             contentEl.innerText = questions[currentIndex].a;
             container.style.borderColor = "#e74c3c";
-            footerEl.style.display = "block";
         } else if (phase === 4) {
             labelEl.innerText = "GOAL!!";
             contentEl.innerHTML = `
                 <div>おつかれさまでした！</div>
-                <div style='font-size:1.8rem; color:#bdc3c7; margin-top:40px;'>[Alt + H] でクイズを振り返る</div>
+                <div style='font-size:1.2rem; color:#bdc3c7; margin-top:30px;' onclick='toggleHistory()'>ここをタップ、または [Alt+H] で<br>クイズを振り返る</div>
             `;
             container.style.borderColor = "#2ecc71";
             footerEl.style.display = "none";
@@ -202,40 +226,30 @@
             
             questions.forEach((item, i) => {
                 const itemHTML = `<div class="history-item"><div class="history-q">第 ${i+1} 問：${item.q}</div><div class="history-a">正解：${item.a}</div></div>`;
-                // 出題（問題表示）まで進んだものを出題済みとする
                 if (i <= maxReachedIndex) { solvedHTML += itemHTML; }
                 else { remainingHTML += itemHTML; }
             });
-
             list.innerHTML = solvedHTML + remainingHTML;
             overlay.style.display = "flex";
-        } else {
-            overlay.style.display = "none";
+            isHistoryOpen = true;
         }
-        isHistoryOpen = !isHistoryOpen;
     }
 
+    function closeHistory() {
+        document.getElementById('history-overlay').style.display = "none";
+        isHistoryOpen = false;
+    }
+
+    // キーボード操作も維持
     window.addEventListener('keydown', (e) => {
-        if (e.key === "Enter") {
-            if (!isHistoryOpen) handleNext();
-        } else if (e.key === "Backspace") {
-            if (!isHistoryOpen) {
-                e.preventDefault();
-                handleBack();
-            }
-        } else if (e.key === "Escape") {
-            if (isHistoryOpen) toggleHistory();
-        } else if (e.altKey && (e.key === "h" || e.key === "H")) {
-            e.preventDefault();
-            toggleHistory();
-        }
+        if (e.key === "Enter") handleNext();
+        else if (e.key === "Backspace") { e.preventDefault(); handleBack(); }
+        else if (e.key === "Escape") closeHistory();
+        else if (e.altKey && (e.key === "h" || e.key === "H")) { e.preventDefault(); toggleHistory(); }
     });
 
-    window.onbeforeunload = function(e) {
-        const msg = "出題順がリセットされるため、再読み込みは禁止です。";
-        e.returnValue = msg;
-        return msg;
-    };
+    // 誤リロード防止
+    window.onbeforeunload = function() { return "リセットされますがよろしいですか？"; };
 
     init();
 </script>
