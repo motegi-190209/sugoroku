@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>生協すごろく - クイズマス</title>
     <style>
+        /* CSSカスタムプロパティでスマホの高さ問題を解決 */
+        :root {
+            --vh: 100vh;
+        }
+
         body {
             margin: 0;
             background-color: #1a252f;
@@ -13,39 +18,59 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            /* 動的ビューポート単位(dvh)を優先、非対応ブラウザ用にvhも併記 */
             height: 100vh;
+            height: 100dvh;
             overflow: hidden;
             text-align: center;
             touch-action: manipulation;
         }
+
         #display-container {
-            width: 90%;
+            width: 85%;
             max-width: 800px;
+            /* 高さを固定せず、中身に合わせて広がるが、最小値を確保 */
+            min-height: 300px;
             padding: 30px 15px;
             border: 6px solid #f1c40f;
             border-radius: 25px;
             background-color: #2c3e50;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            margin-bottom: 80px;
+            margin-bottom: 90px;
+            position: relative;
+            z-index: 10;
+            /* 内部の要素をしっかり分ける */
+            display: flex;
+            flex-direction: column;
         }
-        .label { font-size: 1.2rem; color: #f1c40f; margin-bottom: 10px; font-weight: bold; }
+
+        .label { 
+            font-size: 1.2rem; 
+            color: #f1c40f; 
+            margin-bottom: 20px; 
+            font-weight: bold;
+            height: 2.5rem; /* 高さを確保して位置を安定させる */
+        }
+
         .content { 
+            flex-grow: 1;
             font-size: 1.8rem; 
             line-height: 1.4; 
             font-weight: bold; 
-            min-height: 150px; 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
             justify-content: center; 
-            /* 描画残りを防ぐため背景色を明示 */
-            background-color: transparent; 
+            /* 文字が重なるのを防ぐための設定 */
+            position: relative;
+            overflow: hidden;
+            transition: opacity 0.1s ease-in;
         }
 
         @media (min-width: 768px) {
-            .label { font-size: 2rem; }
+            .label { font-size: 2rem; height: 3.5rem; }
             .content { font-size: 3.5rem; min-height: 250px; }
-            #display-container { border-width: 10px; padding: 50px; }
+            #display-container { border-width: 10px; padding: 50px; min-height: 450px; }
         }
 
         .controls {
@@ -69,17 +94,18 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            background: none;
         }
-        .btn:active { opacity: 0.6; }
+        .btn:active { opacity: 0.6; background-color: rgba(255,255,255,0.1); }
         #back-btn { background-color: #7f8c8d; border-right: 2px solid #2c3e50; }
         #next-btn { background-color: #2980b9; }
 
         #force-quit-btn {
             position: fixed;
-            top: 15px;
+            top: env(safe-area-inset-top, 15px); /* iPhoneのノッチ対策 */
             right: 15px;
             padding: 8px 12px;
-            background: rgba(46, 204, 113, 0.5);
+            background: rgba(46, 204, 113, 0.7);
             color: white;
             border: 1px solid rgba(255,255,255,0.4);
             border-radius: 20px;
@@ -96,8 +122,7 @@
         .history-item { text-align: left; border-left: 4px solid #7f8c8d; padding-left: 10px; margin-bottom: 20px; }
         .history-q { font-size: 1rem; color: #bdc3c7; }
         .history-a { font-size: 1.2rem; color: #f1c40f; font-weight: bold; }
-        
-        #reset-btn { margin-top: 40px; padding: 15px; background: #c0392b; color: white; border: none; border-radius: 10px; font-weight: bold;}
+        #reset-btn { margin-top: 40px; padding: 15px; background: #c0392b; color: white; border: none; border-radius: 10px; font-weight: bold; flex-shrink: 0;}
     </style>
 </head>
 <body>
@@ -117,7 +142,7 @@
 <div id="history-overlay" onclick="closeHistory()">
     <div style="color:#bdc3c7; margin-bottom:20px;">閉じる [タップ]</div>
     <div id="history-list"></div>
-    <button id="reset-btn" onclick="fullReset()">⚠ リセットして最初から</button>
+    <button id="reset-btn" onclick="fullReset(event)">⚠ リセットして最初から</button>
 </div>
 
 <script>
@@ -213,41 +238,43 @@
     function updateDisplay() {
         const labelEl = document.getElementById('label');
         const contentEl = document.getElementById('content');
-        const container = document.getElementById('display-container');
         const fqBtn = document.getElementById('force-quit-btn');
         const controls = document.getElementById('controls-area');
+        const container = document.getElementById('display-container');
 
-        // スマホの描画バグ対策: 一旦内容を空にする
-        contentEl.innerHTML = "";
-        contentEl.innerText = "";
+        // 表示の切り替え時に一瞬透明にして強制描画
+        contentEl.style.opacity = 0;
 
-        fqBtn.style.display = (state.phase === 1) ? "block" : "none";
-        controls.style.display = (state.phase === 4) ? "none" : "flex";
+        setTimeout(() => {
+            fqBtn.style.display = (state.phase === 1) ? "block" : "none";
+            controls.style.display = (state.phase === 4) ? "none" : "flex";
 
-        if (state.phase === 0) {
-            labelEl.innerText = "GAME START";
-            contentEl.innerHTML = "生協すごろく<br>クイズマス";
-            container.style.borderColor = "#f1c40f";
-        } else if (state.phase === 1) {
-            labelEl.innerText = "READY";
-            contentEl.innerText = `第 ${state.currentIndex + 1} 問`;
-            container.style.borderColor = "#f1c40f";
-        } else if (state.phase === 2) {
-            labelEl.innerText = `第 ${state.currentIndex + 1} 問：問題`;
-            contentEl.innerText = state.questions[state.currentIndex].q;
-            container.style.borderColor = "#3498db";
-        } else if (state.phase === 3) {
-            labelEl.innerText = `第 ${state.currentIndex + 1} 問：解答`;
-            contentEl.innerText = state.questions[state.currentIndex].a;
-            container.style.borderColor = "#e74c3c";
-        } else if (state.phase === 4) {
-            labelEl.innerText = "GOAL!!";
-            contentEl.innerHTML = `
-                <div>おつかれさまでした！</div>
-                <div style='font-size:1.1rem; color:#bdc3c7; margin-top:30px;' onclick='toggleHistory()'>[ 履歴を確認する ]</div>
-            `;
-            container.style.borderColor = "#2ecc71";
-        }
+            if (state.phase === 0) {
+                labelEl.innerText = "GAME START";
+                contentEl.innerHTML = "<div>生協すごろく</div><div>クイズマス</div>";
+                container.style.borderColor = "#f1c40f";
+            } else if (state.phase === 1) {
+                labelEl.innerText = "READY";
+                contentEl.innerHTML = `<div>第 ${state.currentIndex + 1} 問</div>`;
+                container.style.borderColor = "#f1c40f";
+            } else if (state.phase === 2) {
+                labelEl.innerText = `第 ${state.currentIndex + 1} 問：問題`;
+                contentEl.innerHTML = `<div>${state.questions[state.currentIndex].q}</div>`;
+                container.style.borderColor = "#3498db";
+            } else if (state.phase === 3) {
+                labelEl.innerText = `第 ${state.currentIndex + 1} 問：解答`;
+                contentEl.innerHTML = `<div>${state.questions[state.currentIndex].a}</div>`;
+                container.style.borderColor = "#e74c3c";
+            } else if (state.phase === 4) {
+                labelEl.innerText = "GOAL!!";
+                contentEl.innerHTML = `
+                    <div>おつかれさまでした！</div>
+                    <div style='font-size:1.1rem; color:#bdc3c7; margin-top:30px;' onclick='toggleHistory()'>[ 履歴を確認する ]</div>
+                `;
+                container.style.borderColor = "#2ecc71";
+            }
+            contentEl.style.opacity = 1;
+        }, 50);
     }
 
     function toggleHistory() {
@@ -267,7 +294,7 @@
     }
 
     window.onbeforeunload = function(e) {
-        return "中断しても続きから再開できますが、リロードしますか？";
+        return "中断しても続きから再開できます。";
     };
 
     init();
