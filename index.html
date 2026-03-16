@@ -63,6 +63,8 @@
             background: rgba(0,0,0,0.95); display: none; flex-direction: column;
             padding: 25px; box-sizing: border-box; overflow-y: auto; z-index: 200;
         }
+        /* 一覧画面用の追加デザイン */
+        .history-section-title { font-size: 1.4rem; color: #f1c40f; margin: 30px 0 15px; text-align: left; border-bottom: 2px solid #f1c40f; padding-bottom: 5px; }
         .history-item { text-align: left; border-left: 4px solid #7f8c8d; padding-left: 10px; margin-bottom: 20px; }
         .history-q { font-size: 1rem; color: #bdc3c7; }
         .history-a { font-size: 1.2rem; color: #f1c40f; font-weight: bold; }
@@ -243,15 +245,25 @@
         const overlay = document.getElementById('history-overlay');
         const list = document.getElementById('history-list');
         list.innerHTML = "";
+
+        let solvedHTML = '<div class="history-section-title">【出題した問題】</div>';
+        let remainingHTML = '<div class="history-section-title">【未出題の問題（参考）】</div>';
+
+        // どこまで出題したかの境界（現在表示中の問題が解答済みならそれも含む）
+        const limit = state.maxReachedIndex + 1;
+
         state.questions.forEach((item, i) => {
-            // 出題済みかどうかの判定。maxReachedIndexまでは「正解」、それ以降は「（未出題）」と表示
-            const answerText = (i <= state.maxReachedIndex) ? `正解：${item.a}` : `<span style="color:#7f8c8d;">（未出題）</span>`;
-            list.innerHTML += `
+            const itemHTML = `
                 <div class="history-item">
                     <div class="history-q">第 ${i+1} 問：${item.q}</div>
-                    <div class="history-a">${answerText}</div>
+                    <div class="history-a">正解：${item.a}</div>
                 </div>`;
+            
+            if (i < limit) { solvedHTML += itemHTML; }
+            else { remainingHTML += itemHTML; }
         });
+
+        list.innerHTML = solvedHTML + remainingHTML;
         overlay.style.display = "flex";
     }
 
