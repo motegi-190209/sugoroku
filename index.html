@@ -38,7 +38,7 @@
         #back-btn { background-color: #7f8c8d; border-right: 2px solid #2c3e50; }
         #next-btn { background-color: #2980b9; }
 
-        /* 自作カスタムポップアップ（モーダル） */
+        /* 自作カスタムポップアップ */
         #custom-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000;
@@ -47,7 +47,7 @@
             background: #34495e; padding: 30px; border-radius: 20px; border: 4px solid #f1c40f;
             width: 80%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
-        .modal-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 30px; line-height: 1.5; }
+        .modal-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 30px; line-height: 1.5; color: white; }
         .modal-btns { display: flex; gap: 15px; }
         .m-btn { flex: 1; padding: 15px; border: none; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; }
         .m-ok { background: #2ecc71; color: white; }
@@ -87,7 +87,7 @@
     <div class="modal-card">
         <div id="modal-msg" class="modal-text"></div>
         <div class="modal-btns">
-            <button class="m-btn m-cancel" onclick="closeModal()">もどる</button>
+            <button class="m-btn m-cancel" onclick="closeModal()">キャンセル</button>
             <button id="modal-confirm-btn" class="m-btn m-ok">OK</button>
         </div>
     </div>
@@ -102,14 +102,26 @@
 <script>
     const quizData = [
         { q: "マッチとライター。先に発明されたのはどちらでしょう？", a: "ライター" },
-        { q: "MARCHのうち、現在大学生協がない大学はいくつ？", a: "3つ" },
-        { q: "稲穂に見立てた夏の秋田の風物詩は？", a: "あきた竿燈まつり" },
-        { q: "秋田大学で進級要件となるTOEICのスコアは？", a: "400点" },
-        { q: "大学生協でレンタカーや旅行の予約ができる。○か×か。", a: "○" },
-        { q: "coopleで本を買うと何%のポイントがつく？", a: "10%" },
-        { q: "「笑って★ダチエル」を開催している組織は？", a: "秋田大学生協学生委員会" },
-        { q: "電気は停電。水の供給が止まることは？", a: "断水" },
-        { q: "日本一高い山は何？", a: "富士山" }
+        { q: "不燃性のガスであるため飛行機のタイヤにも採用されている、大気中で最も多い気体は何でしょう？", a: "窒素" },
+        { q: "輸血を必要とする患者のために、健康な人が自主的に血液を提供する行為を何というでしょう？", a: "献血" },
+        { q: "体長14cm、体重8gほどであり、真っ白もふもふなフォルムから、「雪の妖精」とも呼ばれるかわいい鳥は何でしょう？", a: "シマエナガ" },
+        { q: "バンド、Mrs GREEN APPLEの代表曲の1つで、スペイン語で「なるようになる」という意味の単語は何でしょう？", a: "ケセラセラ" },
+        { q: "室町将軍で、名前に「義」という漢字を持たない唯一の将軍で、初代の将軍でもある人物は誰でしょう？", a: "足利尊氏" },
+        { q: "全国の都道府県のうち、最も市町村の数が多いのは都道府県でしょう？", a: "北海道" },
+        { q: "歌集において、和歌の作者が明確でない時に記載される言葉は何でしょう？", a: "詠み人知らず" },
+        { q: "排他的経済水域とは、沿岸から何海里までの範囲を指すでしょう", a: "200海里" },
+        { q: "マイクロ、ホール、駒込などの種類がある、液体を少量採るのに用いられる実験器具は何でしょう？", a: "ピペット" },
+        { q: "FRUITS ZIPPERやCANDY TUNEなどが所属し、「原宿から世界へ」がコンセプトである、アイドルプロジェクトは何でしょう？", a: "KAWAII LAB.(カワイイラボ)" },
+        { q: "車が、すぐに停車できるような速度で進むことを漢字2文字で何というでしょう？", a: "徐行" },
+        { q: "これを2乗したものは分散と呼ばれる、統計学においてあるデータのばらつきを示す指標を何というでしょう？", a: "標準偏差" },
+        { q: "同じ学校の卒業生たちが、交流などを目的として集まるイベントのことを、漢字3文字で何というでしょう？", a: "同窓会" },
+        { q: "日本のマイナンバー制度において、個人に与えられるマイナンバーは何桁でしょう？", a: "12桁" },
+        { q: "セブンイレブンのロゴの中で、唯一小文字で書かれているアルファベットは何でしょう？", a: "n" },
+        { q: "名詞だと「遺言」や「意志」という意味になる、英語で推測や単純未来を表す助動詞は何でしょう？", a: "will" },
+        { q: "有名な戦法に「る攻め」がある、相手の言った言葉の最後の文字から始まる単語を言い合うという言葉遊びは何でしょう？", a: "しりとり" },
+        { q: "一般に「世界三大穀物」と言われる3種類の穀物とは、米、小麦と何でしょう？", a: "トウモロコシ" },
+        { q: "手紙をかくときのマナーで、「拝啓」から文章を始めた場合、文末に用いる漢字2文字の言葉は何でしょう？", a: "敬具" },
+        { q: "労働基準法第32条によると、使用者は労働者に1日当たり何時間を超えて労働させてはならないとされているでしょう？", a: "8時間" },
     ];
 
     let state = { questions: [], currentIndex: 0, phase: 0, maxReachedIndex: -1 };
@@ -121,7 +133,6 @@
         return false;
     }
 
-    // --- カスタムポップアップの制御 ---
     function showModal(msg, onConfirm) {
         document.getElementById('modal-msg').innerText = msg;
         const confirmBtn = document.getElementById('modal-confirm-btn');
