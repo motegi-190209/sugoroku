@@ -23,14 +23,14 @@
             max-width: 800px;
             padding: 30px 15px;
             border: 6px solid #f1c40f;
-            border-radius: 20px;
+            border-radius: 25px;
             background-color: #2c3e50;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            margin-bottom: 80px; /* ボタン用のスペース */
+            margin-bottom: 80px;
         }
         .label { font-size: 1.2rem; color: #f1c40f; margin-bottom: 10px; font-weight: bold; }
         .content { 
-            font-size: 2rem; 
+            font-size: 1.8rem; 
             line-height: 1.4; 
             font-weight: bold; 
             min-height: 150px; 
@@ -40,70 +40,69 @@
             justify-content: center; 
         }
 
-        /* PC向け表示調整 */
         @media (min-width: 768px) {
             .label { font-size: 2rem; }
             .content { font-size: 3.5rem; min-height: 250px; }
             #display-container { border-width: 10px; padding: 50px; }
         }
 
-        /* 下部固定ボタンエリア */
+        /* 下部固定ボタン */
         .controls {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
             display: flex;
-            height: 80px;
+            height: 90px;
             background: #34495e;
             z-index: 100;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
         }
         .btn {
             flex: 1;
             border: none;
             color: white;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: bold;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: opacity 0.2s;
         }
-        .btn:active { opacity: 0.7; }
-        #back-btn { background-color: #7f8c8d; border-right: 1px solid #2c3e50; }
+        .btn:active { opacity: 0.6; }
+        #back-btn { background-color: #7f8c8d; border-right: 2px solid #2c3e50; }
         #next-btn { background-color: #2980b9; }
 
-        /* 強制終了ボタン（目立たないように） */
+        /* 全員ゴールボタン（旧・強制終了） */
         #force-quit-btn {
             position: fixed;
-            top: 10px;
-            right: 10px;
-            padding: 5px 10px;
-            background: rgba(231, 76, 60, 0.4);
+            top: 15px;
+            right: 15px;
+            padding: 8px 12px;
+            background: rgba(46, 204, 113, 0.5); /* 緑系でポジティブに */
             color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 0.7rem;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 20px;
+            font-size: 0.8rem;
             display: none;
+            z-index: 50;
         }
 
-        /* 履歴オーバーレイ */
         #history-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); display: none; flex-direction: column;
-            padding: 20px; box-sizing: border-box; overflow-y: auto; z-index: 200;
+            padding: 25px; box-sizing: border-box; overflow-y: auto; z-index: 200;
         }
-        .history-item { text-align: left; border-left: 4px solid #7f8c8d; padding-left: 10px; margin-bottom: 15px; }
-        .history-q { font-size: 0.9rem; color: #bdc3c7; }
-        .history-a { font-size: 1.1rem; color: #f1c40f; font-weight: bold; }
+        .history-item { text-align: left; border-left: 4px solid #7f8c8d; padding-left: 10px; margin-bottom: 20px; }
+        .history-q { font-size: 1rem; color: #bdc3c7; }
+        .history-a { font-size: 1.2rem; color: #f1c40f; font-weight: bold; }
         
-        #reset-btn { margin-top: 30px; padding: 10px; background: #c0392b; color: white; border: none; border-radius: 5px; }
+        #reset-btn { margin-top: 40px; padding: 15px; background: #c0392b; color: white; border: none; border-radius: 10px; font-weight: bold;}
     </style>
 </head>
 <body>
 
-<button id="force-quit-btn" onclick="jumpToFinish()">強制終了</button>
+<button id="force-quit-btn" onclick="jumpToFinish()">🏁 全員ゴール！</button>
 
 <div id="display-container">
     <div id="label" class="label"></div>
@@ -111,14 +110,14 @@
 </div>
 
 <div class="controls" id="controls-area">
-    <button class="btn" id="back-btn" onclick="handleBack()">← 戻る</button>
-    <button class="btn" id="next-btn" onclick="handleNext()">次へ →</button>
+    <button class="btn" id="back-btn" onclick="handleBack()">← もどる</button>
+    <button class="btn" id="next-btn" onclick="handleNext()">つぎへ →</button>
 </div>
 
 <div id="history-overlay" onclick="closeHistory()">
-    <div style="color:#bdc3c7;">タップして閉じる</div>
+    <div style="color:#bdc3c7; margin-bottom:20px;">閉じる [タップ]</div>
     <div id="history-list"></div>
-    <button id="reset-btn" onclick="fullReset()">全てのデータを消去して最初から</button>
+    <button id="reset-btn" onclick="fullReset()">⚠ データを消去して最初から</button>
 </div>
 
 <script>
@@ -141,7 +140,6 @@
         maxReachedIndex: -1
     };
 
-    // --- セーブ・ロード機能 ---
     function saveState() {
         localStorage.setItem('seikyo_quiz_state', JSON.stringify(state));
     }
@@ -156,13 +154,13 @@
     }
 
     function fullReset() {
-        if(confirm("データを削除して最初（リセット）に戻りますか？")) {
+        event.stopPropagation(); // 履歴を閉じるイベントを防ぐ
+        if(confirm("出題順をリセットして最初からやり直しますか？\n(練習後に本番を始める時に使ってください)")) {
             localStorage.removeItem('seikyo_quiz_state');
             location.reload();
         }
     }
 
-    // --- ゲーム進行ロジック ---
     function shuffle(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -174,9 +172,6 @@
         if (!loadState()) {
             state.questions = [...quizData];
             shuffle(state.questions);
-            state.phase = 0;
-            state.currentIndex = 0;
-            state.maxReachedIndex = -1;
         }
         updateDisplay();
     }
@@ -208,7 +203,7 @@
     }
 
     function jumpToFinish() {
-        if(confirm("終了画面へ移動しますか？")) {
+        if(confirm("お疲れ様でした！\n全員無事にゴールですね！？\n(終了画面へ移動します)")) {
             state.phase = 4;
             saveState();
             updateDisplay();
@@ -245,7 +240,7 @@
             labelEl.innerText = "GOAL!!";
             contentEl.innerHTML = `
                 <div>おつかれさまでした！</div>
-                <div style='font-size:1.1rem; color:#bdc3c7; margin-top:20px;' onclick='toggleHistory()'>[ 履歴を確認する ]</div>
+                <div style='font-size:1.1rem; color:#bdc3c7; margin-top:30px;' onclick='toggleHistory()'>[ 履歴を確認する ]</div>
             `;
             container.style.borderColor = "#2ecc71";
         }
@@ -267,17 +262,17 @@
         document.getElementById('history-overlay').style.display = "none";
     }
 
-    // --- 再読み込み対策 ---
-    // 1. 離脱時の警告
-    window.onbeforeunload = function() {
-        return "進行中のデータは自動保存されています。";
-    };
-
-    // 2. キーボード操作
-    window.addEventListener('keydown', (e) => {
-        if (e.key === "Enter") handleNext();
-        else if (e.key === "Backspace") { e.preventDefault(); handleBack(); }
+    // --- ブラウザの「戻る」ボタンや更新への対策 ---
+    window.addEventListener('popstate', (e) => {
+        // 戻るボタンを押されても現在のURLを維持
+        history.pushState(null, null, null);
+        return false;
     });
+    history.pushState(null, null, null);
+
+    window.onbeforeunload = function(e) {
+        return "中断しても続きから再開できますが、リロードしますか？";
+    };
 
     init();
 </script>
