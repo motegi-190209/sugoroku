@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>生協すごろく - クイズマス</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #1a252f;
+            color: white;
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            text-align: center;
+        }
+        #display-container {
+            position: relative;
+            width: 80%;
+            padding: 60px 40px;
+            border: 10px solid #f1c40f;
+            border-radius: 40px;
+            background-color: #2c3e50;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            transition: border-color 0.3s ease;
+        }
+        .label { font-size: 2.2rem; color: #f1c40f; margin-bottom: 20px; font-weight: bold; letter-spacing: 2px; }
+        .content { 
+            font-size: 4.5rem; 
+            line-height: 1.3; 
+            font-weight: bold; 
+            min-height: 200px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        
+        #force-quit-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            background: rgba(231, 76, 60, 0.4);
+            color: white;
+            border: 1px solid rgba(231, 76, 60, 0.5);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: none;
+        }
+        #force-quit-btn:hover { background: #e74c3c; }
+
+        #history-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: none; flex-direction: column;
+            padding: 60px; box-sizing: border-box; overflow-y: auto; z-index: 100;
+        }
+        .history-section-title { font-size: 1.8rem; color: #f1c40f; margin: 40px 0 20px; text-align: left; border-bottom: 2px solid #f1c40f; }
+        .history-item { margin-bottom: 25px; text-align: left; border-left: 5px solid #7f8c8d; padding-left: 20px; }
+        .history-q { font-size: 1.4rem; color: #ecf0f1; }
+        .history-a { font-size: 1.8rem; color: #f1c40f; font-weight: bold; }
+        .history-hint { color: #95a5a6; position: sticky; top: 0; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; }
+
+        .footer-guide { position: fixed; bottom: 20px; width: 100%; color: #7f8c8d; font-size: 1rem; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div id="display-container">
+    <div id="label" class="label">GAME START</div>
+    <div id="content" class="content">生協すごろく<br>クイズマス</div>
+</div>
+
+<button id="force-quit-btn" onclick="jumpToFinish()">【終了】全員ゴール済みの場合</button>
+
+<div id="history-overlay">
+    <div class="history-hint">履歴を閉じるには [Esc] を押してください</div>
+    <div id="history-list"></div>
+</div>
+
+<div id="footer-guide" class="footer-guide">
+    [Enter]: 次へ / [Backspace]: ひとつ前へ
+</div>
+
+<script>
+    const quizData = [
+        { q: "マッチとライター。先に発明されたのはどちらでしょう？", a: "ライター" },
+        { q: "いわゆるMARCHのうち、現在大学生協がない大学はいくつあるでしょう？", a: "3つ" },
+        { q: "多くの提灯をさげた竹竿を稲穂に見立て、高く掲げて街を練り歩く、夏の秋田の風物詩はなんでしょう？", a: "あきた竿燈まつり" },
+        { q: "秋田大学では原則として、2年次から3年次への進級要件として課されているのはTOEICのスコア何点以上でしょう？", a: "400" },
+        { q: "秋田大学生協ではレンタカーや旅行の予約をすることができる。○か×か。", a: "○" },
+        { q: "coopleでは本や雑誌を買うとポイントがつきますが、会計の何%のポイントがつくでしょう？", a: "10%" },
+        { q: "「笑って★ダチエル」を開催しているのは、なんという組織でしょう？", a: "秋田大学生協学生委員会" },
+        { q: "災害などで、電気の供給が止まることを停電といいますが、水の供給が止まることを何と言うでしょう？", a: "断水" },
+        { q: "日本一高い山は何でしょう？", a: "富士山" }
+    ];
+
+    let questions = [];
+    let currentIndex = 0;
+    let phase = 0; // 0:START, 1:COVER, 2:QUESTION, 3:ANSWER, 4:FINISH
+    let isHistoryOpen = false;
+    let maxReachedIndex = -1; // どこまで出題したかを記録
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function init() {
+        questions = [...quizData];
+        shuffle(questions);
+        updateDisplay();
+    }
+
+    function handleNext() {
+        if (phase === 0) { phase = 1; }
+        else if (phase === 1) { phase = 2; maxReachedIndex = Math.max(maxReachedIndex, currentIndex); }
+        else if (phase === 2) { phase = 3; }
+        else if (phase === 3) {
+            if (currentIndex < questions.length - 1) {
+                currentIndex++;
+                phase = 1;
+            } else {
+                phase = 4;
+            }
+        }
+        updateDisplay();
+    }
+
+    function handleBack() {
+        if (phase === 1) {
+            if (currentIndex > 0) { currentIndex--; phase = 3; }
+            else { phase = 0; }
+        }
+        else if (phase === 2) { phase = 1; }
+        else if (phase === 3) { phase = 2; }
+        else if (phase === 4) { phase = 3; }
+        updateDisplay();
+    }
+
+    function jumpToFinish() {
+        if(confirm("まだ問題が残っていますが、終了画面へ移動しますか？")) {
+            phase = 4;
+            updateDisplay();
+        }
+    }
+
+    function updateDisplay() {
+        const labelEl = document.getElementById('label');
+        const contentEl = document.getElementById('content');
+        const container = document.getElementById('display-container');
+        const btn = document.getElementById('force-quit-btn');
+        const footerEl = document.getElementById('footer-guide');
+
+        btn.style.display = (phase === 1) ? "block" : "none";
+
+        if (phase === 0) {
+            labelEl.innerText = "GAME START";
+            contentEl.innerHTML = "生協すごろく<br>クイズマス";
+            container.style.borderColor = "#f1c40f";
+            footerEl.style.display = "block";
+        } else if (phase === 1) {
+            labelEl.innerText = "READY";
+            contentEl.innerText = `第 ${currentIndex + 1} 問`;
+            container.style.borderColor = "#f1c40f";
+            footerEl.style.display = "block";
+        } else if (phase === 2) {
+            labelEl.innerText = `第 ${currentIndex + 1} 問：問題`;
+            contentEl.innerText = questions[currentIndex].q;
+            container.style.borderColor = "#3498db";
+            footerEl.style.display = "block";
+        } else if (phase === 3) {
+            labelEl.innerText = `第 ${currentIndex + 1} 問：解答`;
+            contentEl.innerText = questions[currentIndex].a;
+            container.style.borderColor = "#e74c3c";
+            footerEl.style.display = "block";
+        } else if (phase === 4) {
+            labelEl.innerText = "GOAL!!";
+            contentEl.innerHTML = `
+                <div>おつかれさまでした！</div>
+                <div style='font-size:1.8rem; color:#bdc3c7; margin-top:40px;'>[Alt + H] でクイズを振り返る</div>
+            `;
+            container.style.borderColor = "#2ecc71";
+            footerEl.style.display = "none";
+        }
+    }
+
+    function toggleHistory() {
+        if (phase !== 4) return;
+        const overlay = document.getElementById('history-overlay');
+        const list = document.getElementById('history-list');
+        
+        if (!isHistoryOpen) {
+            list.innerHTML = "";
+            let solvedHTML = '<div class="history-section-title">【出題した問題】</div>';
+            let remainingHTML = '<div class="history-section-title">【未出題の問題（参考）】</div>';
+            
+            questions.forEach((item, i) => {
+                const itemHTML = `<div class="history-item"><div class="history-q">第 ${i+1} 問：${item.q}</div><div class="history-a">正解：${item.a}</div></div>`;
+                // 出題（問題表示）まで進んだものを出題済みとする
+                if (i <= maxReachedIndex) { solvedHTML += itemHTML; }
+                else { remainingHTML += itemHTML; }
+            });
+
+            list.innerHTML = solvedHTML + remainingHTML;
+            overlay.style.display = "flex";
+        } else {
+            overlay.style.display = "none";
+        }
+        isHistoryOpen = !isHistoryOpen;
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === "Enter") {
+            if (!isHistoryOpen) handleNext();
+        } else if (e.key === "Backspace") {
+            if (!isHistoryOpen) {
+                e.preventDefault();
+                handleBack();
+            }
+        } else if (e.key === "Escape") {
+            if (isHistoryOpen) toggleHistory();
+        } else if (e.altKey && (e.key === "h" || e.key === "H")) {
+            e.preventDefault();
+            toggleHistory();
+        }
+    });
+
+    window.onbeforeunload = function(e) {
+        const msg = "出題順がリセットされるため、再読み込みは禁止です。";
+        e.returnValue = msg;
+        return msg;
+    };
+
+    init();
+</script>
+</body>
+</html>
