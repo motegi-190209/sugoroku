@@ -38,6 +38,8 @@
             flex-direction: column; 
             align-items: center; 
             justify-content: center; 
+            /* 描画残りを防ぐため背景色を明示 */
+            background-color: transparent; 
         }
 
         @media (min-width: 768px) {
@@ -46,7 +48,6 @@
             #display-container { border-width: 10px; padding: 50px; }
         }
 
-        /* 下部固定ボタン */
         .controls {
             position: fixed;
             bottom: 0;
@@ -73,13 +74,12 @@
         #back-btn { background-color: #7f8c8d; border-right: 2px solid #2c3e50; }
         #next-btn { background-color: #2980b9; }
 
-        /* 全員ゴールボタン（旧・強制終了） */
         #force-quit-btn {
             position: fixed;
             top: 15px;
             right: 15px;
             padding: 8px 12px;
-            background: rgba(46, 204, 113, 0.5); /* 緑系でポジティブに */
+            background: rgba(46, 204, 113, 0.5);
             color: white;
             border: 1px solid rgba(255,255,255,0.4);
             border-radius: 20px;
@@ -117,7 +117,7 @@
 <div id="history-overlay" onclick="closeHistory()">
     <div style="color:#bdc3c7; margin-bottom:20px;">閉じる [タップ]</div>
     <div id="history-list"></div>
-    <button id="reset-btn" onclick="fullReset()">⚠ データを消去して最初から</button>
+    <button id="reset-btn" onclick="fullReset()">⚠ リセットして最初から</button>
 </div>
 
 <script>
@@ -153,9 +153,9 @@
         return false;
     }
 
-    function fullReset() {
-        event.stopPropagation(); // 履歴を閉じるイベントを防ぐ
-        if(confirm("出題順をリセットして最初からやり直しますか？\n(練習後に本番を始める時に使ってください)")) {
+    function fullReset(e) {
+        if(e) e.stopPropagation();
+        if(confirm("リセットして最初からやり直しますか？")) {
             localStorage.removeItem('seikyo_quiz_state');
             location.reload();
         }
@@ -203,7 +203,7 @@
     }
 
     function jumpToFinish() {
-        if(confirm("お疲れ様でした！\n全員無事にゴールですね！？\n(終了画面へ移動します)")) {
+        if(confirm("お疲れ様でした！\n(終了画面へ移動します)")) {
             state.phase = 4;
             saveState();
             updateDisplay();
@@ -216,6 +216,10 @@
         const container = document.getElementById('display-container');
         const fqBtn = document.getElementById('force-quit-btn');
         const controls = document.getElementById('controls-area');
+
+        // スマホの描画バグ対策: 一旦内容を空にする
+        contentEl.innerHTML = "";
+        contentEl.innerText = "";
 
         fqBtn.style.display = (state.phase === 1) ? "block" : "none";
         controls.style.display = (state.phase === 4) ? "none" : "flex";
@@ -261,14 +265,6 @@
     function closeHistory() {
         document.getElementById('history-overlay').style.display = "none";
     }
-
-    // --- ブラウザの「戻る」ボタンや更新への対策 ---
-    window.addEventListener('popstate', (e) => {
-        // 戻るボタンを押されても現在のURLを維持
-        history.pushState(null, null, null);
-        return false;
-    });
-    history.pushState(null, null, null);
 
     window.onbeforeunload = function(e) {
         return "中断しても続きから再開できますが、リロードしますか？";
