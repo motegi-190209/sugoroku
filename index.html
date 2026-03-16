@@ -5,115 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>生協すごろく - クイズマス</title>
     <style>
-        /* CSSカスタムプロパティでスマホの高さ問題を解決 */
-        :root {
-            --vh: 100vh;
-        }
-
+        :root { --vh: 100vh; }
         body {
-            margin: 0;
-            background-color: #1a252f;
-            color: white;
-            font-family: sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            /* 動的ビューポート単位(dvh)を優先、非対応ブラウザ用にvhも併記 */
-            height: 100vh;
-            height: 100dvh;
-            overflow: hidden;
-            text-align: center;
+            margin: 0; background-color: #1a252f; color: white; font-family: sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; height: 100dvh; overflow: hidden; text-align: center;
             touch-action: manipulation;
         }
-
         #display-container {
-            width: 85%;
-            max-width: 800px;
-            /* 高さを固定せず、中身に合わせて広がるが、最小値を確保 */
-            min-height: 300px;
-            padding: 30px 15px;
-            border: 6px solid #f1c40f;
-            border-radius: 25px;
-            background-color: #2c3e50;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            margin-bottom: 90px;
-            position: relative;
-            z-index: 10;
-            /* 内部の要素をしっかり分ける */
-            display: flex;
-            flex-direction: column;
+            width: 85%; max-width: 800px; min-height: 300px; padding: 30px 15px;
+            border: 6px solid #f1c40f; border-radius: 25px; background-color: #2c3e50;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 90px;
+            position: relative; z-index: 10; display: flex; flex-direction: column;
         }
-
-        .label { 
-            font-size: 1.2rem; 
-            color: #f1c40f; 
-            margin-bottom: 20px; 
-            font-weight: bold;
-            height: 2.5rem; /* 高さを確保して位置を安定させる */
-        }
-
+        .label { font-size: 1.2rem; color: #f1c40f; margin-bottom: 20px; font-weight: bold; height: 2.5rem; }
         .content { 
-            flex-grow: 1;
-            font-size: 1.8rem; 
-            line-height: 1.4; 
-            font-weight: bold; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            /* 文字が重なるのを防ぐための設定 */
-            position: relative;
-            overflow: hidden;
-            transition: opacity 0.1s ease-in;
+            flex-grow: 1; font-size: 1.8rem; line-height: 1.4; font-weight: bold; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            position: relative; overflow: hidden; transition: opacity 0.1s ease-in;
         }
-
         @media (min-width: 768px) {
             .label { font-size: 2rem; height: 3.5rem; }
             .content { font-size: 3.5rem; min-height: 250px; }
             #display-container { border-width: 10px; padding: 50px; min-height: 450px; }
         }
-
         .controls {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            display: flex;
-            height: 90px;
-            background: #34495e;
-            z-index: 100;
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
+            position: fixed; bottom: 0; left: 0; width: 100%; display: flex;
+            height: 90px; background: #34495e; z-index: 100; box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
         }
-        .btn {
-            flex: 1;
-            border: none;
-            color: white;
-            font-size: 1.3rem;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: none;
-        }
+        .btn { flex: 1; border: none; color: white; font-size: 1.3rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; background: none; }
         .btn:active { opacity: 0.6; background-color: rgba(255,255,255,0.1); }
         #back-btn { background-color: #7f8c8d; border-right: 2px solid #2c3e50; }
         #next-btn { background-color: #2980b9; }
 
-        #force-quit-btn {
-            position: fixed;
-            top: env(safe-area-inset-top, 15px); /* iPhoneのノッチ対策 */
-            right: 15px;
-            padding: 8px 12px;
-            background: rgba(46, 204, 113, 0.7);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.4);
-            border-radius: 20px;
-            font-size: 0.8rem;
-            display: none;
-            z-index: 50;
+        /* 自作カスタムポップアップ（モーダル） */
+        #custom-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000;
         }
+        .modal-card {
+            background: #34495e; padding: 30px; border-radius: 20px; border: 4px solid #f1c40f;
+            width: 80%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .modal-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 30px; line-height: 1.5; }
+        .modal-btns { display: flex; gap: 15px; }
+        .m-btn { flex: 1; padding: 15px; border: none; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; }
+        .m-ok { background: #2ecc71; color: white; }
+        .m-cancel { background: #95a5a6; color: white; }
 
+        #force-quit-btn {
+            position: fixed; top: env(safe-area-inset-top, 15px); right: 15px;
+            padding: 8px 12px; background: rgba(46, 204, 113, 0.7); color: white;
+            border: 1px solid rgba(255,255,255,0.4); border-radius: 20px; font-size: 0.8rem; display: none; z-index: 50;
+        }
         #history-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); display: none; flex-direction: column;
@@ -122,12 +66,12 @@
         .history-item { text-align: left; border-left: 4px solid #7f8c8d; padding-left: 10px; margin-bottom: 20px; }
         .history-q { font-size: 1rem; color: #bdc3c7; }
         .history-a { font-size: 1.2rem; color: #f1c40f; font-weight: bold; }
-        #reset-btn { margin-top: 40px; padding: 15px; background: #c0392b; color: white; border: none; border-radius: 10px; font-weight: bold; flex-shrink: 0;}
+        #reset-btn-trigger { margin-top: 40px; padding: 15px; background: #c0392b; color: white; border: none; border-radius: 10px; font-weight: bold; flex-shrink: 0;}
     </style>
 </head>
 <body>
 
-<button id="force-quit-btn" onclick="jumpToFinish()">🏁 全員ゴール！</button>
+<button id="force-quit-btn" onclick="askFinish()">🏁 全員ゴール！</button>
 
 <div id="display-container">
     <div id="label" class="label"></div>
@@ -139,10 +83,20 @@
     <button class="btn" id="next-btn" onclick="handleNext()">つぎへ →</button>
 </div>
 
+<div id="custom-modal">
+    <div class="modal-card">
+        <div id="modal-msg" class="modal-text"></div>
+        <div class="modal-btns">
+            <button class="m-btn m-cancel" onclick="closeModal()">もどる</button>
+            <button id="modal-confirm-btn" class="m-btn m-ok">OK</button>
+        </div>
+    </div>
+</div>
+
 <div id="history-overlay" onclick="closeHistory()">
     <div style="color:#bdc3c7; margin-bottom:20px;">閉じる [タップ]</div>
     <div id="history-list"></div>
-    <button id="reset-btn" onclick="fullReset(event)">⚠ リセットして最初から</button>
+    <button id="reset-btn-trigger" onclick="askReset(event)">⚠ リセットして最初から</button>
 </div>
 
 <script>
@@ -158,32 +112,41 @@
         { q: "日本一高い山は何？", a: "富士山" }
     ];
 
-    let state = {
-        questions: [],
-        currentIndex: 0,
-        phase: 0,
-        maxReachedIndex: -1
-    };
+    let state = { questions: [], currentIndex: 0, phase: 0, maxReachedIndex: -1 };
 
-    function saveState() {
-        localStorage.setItem('seikyo_quiz_state', JSON.stringify(state));
-    }
-
+    function saveState() { localStorage.setItem('seikyo_quiz_state', JSON.stringify(state)); }
     function loadState() {
         const saved = localStorage.getItem('seikyo_quiz_state');
-        if (saved) {
-            state = JSON.parse(saved);
-            return true;
-        }
+        if (saved) { state = JSON.parse(saved); return true; }
         return false;
     }
 
-    function fullReset(e) {
+    // --- カスタムポップアップの制御 ---
+    function showModal(msg, onConfirm) {
+        document.getElementById('modal-msg').innerText = msg;
+        const confirmBtn = document.getElementById('modal-confirm-btn');
+        confirmBtn.onclick = () => {
+            onConfirm();
+            closeModal();
+        };
+        document.getElementById('custom-modal').style.display = 'flex';
+    }
+    function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
+
+    function askReset(e) {
         if(e) e.stopPropagation();
-        if(confirm("リセットして最初からやり直しますか？")) {
+        showModal("リセットして最初からやり直しますか？", () => {
             localStorage.removeItem('seikyo_quiz_state');
             location.reload();
-        }
+        });
+    }
+
+    function askFinish() {
+        showModal("お疲れ様でした！\n(終了画面へ移動します)", () => {
+            state.phase = 4;
+            saveState();
+            updateDisplay();
+        });
     }
 
     function shuffle(array) {
@@ -206,10 +169,8 @@
         else if (state.phase === 1) { state.phase = 2; state.maxReachedIndex = Math.max(state.maxReachedIndex, state.currentIndex); }
         else if (state.phase === 2) { state.phase = 3; }
         else if (state.phase === 3) {
-            if (state.currentIndex < state.questions.length - 1) {
-                state.currentIndex++;
-                state.phase = 1;
-            } else { state.phase = 4; }
+            if (state.currentIndex < state.questions.length - 1) { state.currentIndex++; state.phase = 1; }
+            else { state.phase = 4; }
         }
         saveState();
         updateDisplay();
@@ -227,14 +188,6 @@
         updateDisplay();
     }
 
-    function jumpToFinish() {
-        if(confirm("お疲れ様でした！\n(終了画面へ移動します)")) {
-            state.phase = 4;
-            saveState();
-            updateDisplay();
-        }
-    }
-
     function updateDisplay() {
         const labelEl = document.getElementById('label');
         const contentEl = document.getElementById('content');
@@ -242,9 +195,7 @@
         const controls = document.getElementById('controls-area');
         const container = document.getElementById('display-container');
 
-        // 表示の切り替え時に一瞬透明にして強制描画
         contentEl.style.opacity = 0;
-
         setTimeout(() => {
             fqBtn.style.display = (state.phase === 1) ? "block" : "none";
             controls.style.display = (state.phase === 4) ? "none" : "flex";
@@ -289,13 +240,7 @@
         overlay.style.display = "flex";
     }
 
-    function closeHistory() {
-        document.getElementById('history-overlay').style.display = "none";
-    }
-
-    window.onbeforeunload = function(e) {
-        return "中断しても続きから再開できます。";
-    };
+    function closeHistory() { document.getElementById('history-overlay').style.display = "none"; }
 
     init();
 </script>
