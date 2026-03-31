@@ -26,21 +26,13 @@
             position: relative; overflow: hidden; transition: opacity 0.1s ease-in;
         }
         
-        /* ボタンコンテナの調整 */
-        .choice-container { 
-            display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 320px; margin-top: 10px;
-            align-items: stretch; /* 子要素（ボタン）の幅を揃える */
-        }
+        .choice-container { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 320px; margin-top: 10px; align-items: stretch; }
         .choice-btn {
-            flex: 1; /* 高さを均等にする */
-            padding: 15px; border-radius: 15px; border: none; color: white;
+            flex: 1; padding: 15px; border-radius: 15px; border: none; color: white;
             font-size: 1.3rem; font-weight: bold; cursor: pointer; transition: transform 0.1s;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; /* 垂直中央揃え */
-            min-height: 80px; line-height: 1.2;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px; line-height: 1.2;
         }
-        /* 品切れ用補足テキストのサイズ */
         .choice-btn span { font-size: 0.75rem; opacity: 0.9; margin-top: 4px; font-weight: normal; display: block; }
-        
         .choice-btn:active { transform: scale(0.95); opacity: 0.8; }
         .btn-quiz { background-color: #3498db; box-shadow: 0 4px #2980b9; }
         .btn-percent { background-color: #9b59b6; box-shadow: 0 4px #8e44ad; }
@@ -55,22 +47,12 @@
             .choice-btn span { font-size: 0.9rem; }
         }
 
-        .controls {
-            position: fixed; bottom: 0; left: 0; width: 100%; display: flex;
-            height: 90px; background: #34495e; z-index: 100; box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
-        }
+        .controls { position: fixed; bottom: 0; left: 0; width: 100%; display: flex; height: 90px; background: #34495e; z-index: 100; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); }
         .btn { flex: 1; border: none; color: white; font-size: 1.3rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; background: none; }
         .btn:active { opacity: 0.6; background-color: rgba(255,255,255,0.1); }
         #back-btn { background-color: #7f8c8d; border-right: 2px solid #2c3e50; }
         #next-btn { background-color: #2980b9; }
-
-        #force-quit-btn {
-            position: fixed; top: env(safe-area-inset-top, 20px); right: 20px;
-            padding: 12px 18px; background: rgba(46, 204, 113, 0.9); color: white;
-            border: 2px solid white; border-radius: 30px; font-weight: bold;
-            font-size: 0.9rem; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
+        #force-quit-btn { position: fixed; top: env(safe-area-inset-top, 20px); right: 20px; padding: 12px 18px; background: rgba(46, 204, 113, 0.9); color: white; border: 2px solid white; border-radius: 30px; font-weight: bold; font-size: 0.9rem; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         #custom-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 3000; }
         .modal-card { background: #34495e; padding: 30px; border-radius: 20px; border: 4px solid #f1c40f; width: 80%; max-width: 400px; }
         .modal-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 30px; line-height: 1.5; color: white; text-align: center;}
@@ -89,35 +71,19 @@
 <body>
 
 <button id="force-quit-btn" onclick="askFinish()">🏁 全員ゴール！</button>
-
 <div id="display-container">
     <div id="label" class="label"></div>
     <div id="content" class="content"></div>
 </div>
-
 <div class="controls" id="controls-area">
     <button class="btn" id="back-btn" onclick="handleBack()">← もどる</button>
     <button class="btn" id="next-btn" onclick="handleNext()">つぎへ →</button>
 </div>
 
-<div id="custom-modal">
-    <div class="modal-card">
-        <div id="modal-msg" class="modal-text"></div>
-        <div class="modal-btns">
-            <button class="m-btn m-cancel" onclick="closeModal()">キャンセル</button>
-            <button id="modal-confirm-btn" class="m-btn m-ok">OK</button>
-        </div>
-    </div>
-</div>
-
-<div id="history-overlay" onclick="closeHistory()">
-    <div style="color:#bdc3c7; margin-bottom:20px;">閉じる [タップ]</div>
-    <div id="history-list"></div>
-    <button id="reset-btn-trigger" onclick="askReset(event)">⚠ リセットして最初から</button>
-</div>
+<div id="custom-modal"><div class="modal-card"><div id="modal-msg" class="modal-text"></div><div class="modal-btns"><button class="m-btn m-cancel" onclick="closeModal()">キャンセル</button><button id="modal-confirm-btn" class="m-btn m-ok">OK</button></div></div></div>
+<div id="history-overlay" onclick="closeHistory()"><div style="color:#bdc3c7; margin-bottom:20px;">閉じる [タップ]</div><div id="history-list"></div><button id="reset-btn-trigger" onclick="askReset(event)">⚠ リセットして最初から</button></div>
 
 <script>
-    // データの変更なし
     const quizData = [
         { q: "マッチとライター。先に発明されたのはどちらでしょう？", a: "ライター" },
         { q: "不燃性のガスであるため飛行機のタイヤにも採用されている、大気中で最も多い気体は何でしょう？", a: "窒素" },
@@ -152,9 +118,9 @@
 
     let state = { quizPool: [], percentPool: [], history: [], currentIndex: 0, phase: 0, currentType: 'quiz' };
 
-    function saveState() { localStorage.setItem('seikyo_sugoroku_final_v2', JSON.stringify(state)); }
+    function saveState() { localStorage.setItem('seikyo_sugoroku_fixed', JSON.stringify(state)); }
     function loadState() {
-        const saved = localStorage.getItem('seikyo_sugoroku_final_v2');
+        const saved = localStorage.getItem('seikyo_sugoroku_fixed');
         if (saved) { state = JSON.parse(saved); return true; }
         return false;
     }
@@ -170,8 +136,7 @@
         if (!loadState()) {
             state.quizPool = [...quizData];
             state.percentPool = [...percentData];
-            shuffle(state.quizPool);
-            shuffle(state.percentPool);
+            shuffle(state.quizPool); shuffle(state.percentPool);
         }
         updateDisplay();
     }
@@ -194,7 +159,7 @@
             const pool = state.currentType === 'quiz' ? state.quizPool : state.percentPool;
             if (pool.length > 0) {
                 state.history.push({ type: state.currentType, q: pool[0].q, a: pool[0].a });
-                pool.shift();
+                pool.shift(); // ここで削除される
             }
             if (state.quizPool.length === 0 && state.percentPool.length === 0) { state.phase = 4; }
             else { state.currentIndex++; state.phase = 1; }
@@ -202,10 +167,18 @@
         saveState(); updateDisplay();
     }
 
+    // ★バグ修正ポイント：履歴から戻す処理
     function handleBack() {
         if (state.phase === 1) {
-            if (state.currentIndex > 0) { state.currentIndex--; state.phase = 3; }
-            else { state.phase = 0; }
+            if (state.currentIndex > 0) {
+                state.currentIndex--;
+                // 履歴から削除したばかりの問題を戻す
+                const lastMove = state.history.pop();
+                state.currentType = lastMove.type;
+                const pool = lastMove.type === 'quiz' ? state.quizPool : state.percentPool;
+                pool.unshift({ q: lastMove.q, a: lastMove.a }); // プールの先頭に復活させる
+                state.phase = 3; 
+            } else { state.phase = 0; }
         }
         else if (state.phase === 2) { state.phase = 1; }
         else if (state.phase === 3) { state.phase = 2; }
@@ -238,13 +211,10 @@
                 container.style.borderColor = "#f1c40f";
             } else if (state.phase === 1) {
                 labelEl.innerText = "READY";
-                
                 const qEmpty = state.quizPool.length === 0;
                 const pEmpty = state.percentPool.length === 0;
-                
                 const qBtnHtml = qEmpty ? "クイズマス<span>(品切れのためパーセントが出題されます)</span>" : "クイズマス";
                 const pBtnHtml = pEmpty ? "パーセントマス<span>(品切れのためクイズが出題されます)</span>" : "パーセントマス";
-
                 contentEl.innerHTML = `
                     <div style="margin-bottom:20px;">第 ${state.currentIndex + 1} 問</div>
                     <div class="choice-container">
@@ -253,23 +223,21 @@
                     </div>
                 `;
                 container.style.borderColor = "#f1c40f";
-            } else if (state.phase === 2) {
+            } else if (state.phase === 2 || state.phase === 3) {
                 const pool = state.currentType === 'quiz' ? state.quizPool : state.percentPool;
                 const typeName = state.currentType === 'quiz' ? "クイズ" : "パーセント";
-                labelEl.innerText = `第 ${state.currentIndex + 1} 問：${typeName}`;
-                contentEl.innerHTML = `<div>${pool[0].q}</div>`;
-                container.style.borderColor = state.currentType === 'quiz' ? "#3498db" : "#9b59b6";
-            } else if (state.phase === 3) {
-                const pool = state.currentType === 'quiz' ? state.quizPool : state.percentPool;
-                labelEl.innerText = `第 ${state.currentIndex + 1} 問：解答`;
-                contentEl.innerHTML = `<div>${pool[0].a}</div>`;
-                container.style.borderColor = "#e74c3c";
+                if (state.phase === 2) {
+                    labelEl.innerText = `第 ${state.currentIndex + 1} 問：${typeName}`;
+                    contentEl.innerHTML = `<div>${pool[0].q}</div>`;
+                    container.style.borderColor = state.currentType === 'quiz' ? "#3498db" : "#9b59b6";
+                } else {
+                    labelEl.innerText = `第 ${state.currentIndex + 1} 問：解答`;
+                    contentEl.innerHTML = `<div>${pool[0].a}</div>`;
+                    container.style.borderColor = "#e74c3c";
+                }
             } else if (state.phase === 4) {
                 labelEl.innerText = "GOAL!!";
-                contentEl.innerHTML = `
-                    <div>全行程が終了しました！</div>
-                    <div style='font-size:1.1rem; color:#bdc3c7; margin-top:30px;' onclick='toggleHistory()'>[ 問題一覧を確認する ]</div>
-                `;
+                contentEl.innerHTML = `<div>全行程が終了しました！</div><div style='font-size:1.1rem; color:#bdc3c7; margin-top:30px;' onclick='toggleHistory()'>[ 問題一覧を確認する ]</div>`;
                 container.style.borderColor = "#2ecc71";
             }
             contentEl.style.opacity = 1;
@@ -288,8 +256,7 @@
         const overlay = document.getElementById('history-overlay');
         const list = document.getElementById('history-list');
         list.innerHTML = "";
-        let html = "";
-        html += '<div class="history-section-title">【出題した問題】</div>';
+        let html = '<div class="history-section-title">【出題した問題】</div>';
         if (state.history.length === 0) html += "<div style='color:#7f8c8d;'>まだありません</div>";
         state.history.forEach((item, i) => {
             const typeLabel = item.type === 'quiz' ? '[クイズ]' : '[パーセント]';
@@ -299,18 +266,16 @@
         state.quizPool.forEach((item) => { html += `<div class="history-item"><div class="history-q">${item.q}</div><div class="history-a">正解：${item.a}</div></div>`; });
         html += '<div class="history-section-title">【未出題のパーセント】</div>';
         state.percentPool.forEach((item) => { html += `<div class="history-item"><div class="history-q">${item.q}</div><div class="history-a">正解：${item.a}</div></div>`; });
-        list.innerHTML = html;
-        overlay.style.display = "flex";
+        list.innerHTML = html; overlay.style.display = "flex";
     }
     function closeHistory() { document.getElementById('history-overlay').style.display = "none"; }
     function askReset(e) {
         e.stopPropagation();
         showModal("リセットして最初からやり直しますか？", () => {
-            localStorage.removeItem('seikyo_sugoroku_final_v2');
+            localStorage.removeItem('seikyo_sugoroku_fixed');
             location.reload();
         });
     }
-
     init();
 </script>
 </body>
