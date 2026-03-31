@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>生協すごろく - クイズマス</title>
+    <title>生協すごろく - クイズ＆パーセント</title>
     <style>
         :root { --vh: 100vh; }
         body {
@@ -17,6 +17,7 @@
             border: 6px solid #f1c40f; border-radius: 25px; background-color: #2c3e50;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 90px;
             position: relative; z-index: 10; display: flex; flex-direction: column;
+            transition: border-color 0.3s ease;
         }
         .label { font-size: 1.2rem; color: #f1c40f; margin-bottom: 20px; font-weight: bold; height: 2.5rem; }
         .content { 
@@ -24,11 +25,24 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             position: relative; overflow: hidden; transition: opacity 0.1s ease-in;
         }
+        
+        .choice-container { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 300px; margin-top: 10px; }
+        .choice-btn {
+            padding: 18px; border-radius: 15px; border: none; color: white;
+            font-size: 1.4rem; font-weight: bold; cursor: pointer; transition: transform 0.1s;
+        }
+        .choice-btn:active { transform: scale(0.95); opacity: 0.8; }
+        .btn-quiz { background-color: #3498db; box-shadow: 0 4px #2980b9; }
+        .btn-percent { background-color: #9b59b6; box-shadow: 0 4px #8e44ad; }
+
         @media (min-width: 768px) {
             .label { font-size: 2rem; height: 3.5rem; }
             .content { font-size: 3.5rem; min-height: 250px; }
             #display-container { border-width: 10px; padding: 50px; min-height: 450px; }
+            .choice-container { max-width: 500px; flex-direction: row; }
+            .choice-btn { flex: 1; font-size: 2rem; }
         }
+
         .controls {
             position: fixed; bottom: 0; left: 0; width: 100%; display: flex;
             height: 90px; background: #34495e; z-index: 100; box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
@@ -38,32 +52,29 @@
         #back-btn { background-color: #7f8c8d; border-right: 2px solid #2c3e50; }
         #next-btn { background-color: #2980b9; }
 
-        /* 自作カスタムポップアップ */
+        #force-quit-btn {
+            position: fixed; top: env(safe-area-inset-top, 20px); right: 20px;
+            padding: 12px 18px; background: rgba(46, 204, 113, 0.9); color: white;
+            border: 2px solid white; border-radius: 30px; font-weight: bold;
+            font-size: 0.9rem; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
         #custom-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000;
+            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 3000;
         }
-        .modal-card {
-            background: #34495e; padding: 30px; border-radius: 20px; border: 4px solid #f1c40f;
-            width: 80%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-        }
+        .modal-card { background: #34495e; padding: 30px; border-radius: 20px; border: 4px solid #f1c40f; width: 80%; max-width: 400px; }
         .modal-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 30px; line-height: 1.5; color: white; }
         .modal-btns { display: flex; gap: 15px; }
         .m-btn { flex: 1; padding: 15px; border: none; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; }
         .m-ok { background: #2ecc71; color: white; }
         .m-cancel { background: #95a5a6; color: white; }
 
-        #force-quit-btn {
-            position: fixed; top: env(safe-area-inset-top, 15px); right: 15px;
-            padding: 8px 12px; background: rgba(46, 204, 113, 0.7); color: white;
-            border: 1px solid rgba(255,255,255,0.4); border-radius: 20px; font-size: 0.8rem; display: none; z-index: 50;
-        }
         #history-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); display: none; flex-direction: column;
-            padding: 25px; box-sizing: border-box; overflow-y: auto; z-index: 200;
+            padding: 25px; box-sizing: border-box; overflow-y: auto; z-index: 2500;
         }
-        /* 一覧画面用の追加デザイン */
         .history-section-title { font-size: 1.4rem; color: #f1c40f; margin: 30px 0 15px; text-align: left; border-bottom: 2px solid #f1c40f; padding-bottom: 5px; }
         .history-item { text-align: left; border-left: 4px solid #7f8c8d; padding-left: 10px; margin-bottom: 20px; }
         .history-q { font-size: 1rem; color: #bdc3c7; }
@@ -126,40 +137,21 @@
         { q: "労働基準法第32条によると、使用者は労働者に1日当たり何時間を超えて労働させてはならないとされているでしょう？", a: "8時間" },
     ];
 
-    let state = { questions: [], currentIndex: 0, phase: 0, maxReachedIndex: -1 };
+    const percentData = [
+        { q: "「朝食はパン派」と答えた大学生の割合は？", a: "42%" },
+        { q: "「一人暮らしをしている」と答えた学生の割合は？", a: "65%" },
+        { q: "「週に3回以上コンビニを利用する」人の割合は？", a: "78%" },
+        { q: "「スマホの充電が20%を切ると不安になる」人の割合は？", a: "55%" },
+        { q: "「自分の名前の由来を知っている」人の割合は？", a: "88%" }
+    ];
 
-    function saveState() { localStorage.setItem('seikyo_quiz_state', JSON.stringify(state)); }
+    let state = { quizPool: [], percentPool: [], history: [], currentIndex: 0, phase: 0, currentType: 'quiz' };
+
+    function saveState() { localStorage.setItem('seikyo_sugoroku_final', JSON.stringify(state)); }
     function loadState() {
-        const saved = localStorage.getItem('seikyo_quiz_state');
+        const saved = localStorage.getItem('seikyo_sugoroku_final');
         if (saved) { state = JSON.parse(saved); return true; }
         return false;
-    }
-
-    function showModal(msg, onConfirm) {
-        document.getElementById('modal-msg').innerText = msg;
-        const confirmBtn = document.getElementById('modal-confirm-btn');
-        confirmBtn.onclick = () => {
-            onConfirm();
-            closeModal();
-        };
-        document.getElementById('custom-modal').style.display = 'flex';
-    }
-    function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
-
-    function askReset(e) {
-        if(e) e.stopPropagation();
-        showModal("リセットして最初からやり直しますか？", () => {
-            localStorage.removeItem('seikyo_quiz_state');
-            location.reload();
-        });
-    }
-
-    function askFinish() {
-        showModal("お疲れ様でした！\n(終了画面へ移動します)", () => {
-            state.phase = 4;
-            saveState();
-            updateDisplay();
-        });
     }
 
     function shuffle(array) {
@@ -171,19 +163,32 @@
 
     function init() {
         if (!loadState()) {
-            state.questions = [...quizData];
-            shuffle(state.questions);
+            state.quizPool = [...quizData];
+            state.percentPool = [...percentData];
+            shuffle(state.quizPool);
+            shuffle(state.percentPool);
         }
+        updateDisplay();
+    }
+
+    function selectType(type) {
+        state.currentType = type;
+        state.phase = 2; 
+        saveState();
         updateDisplay();
     }
 
     function handleNext() {
         if (state.phase === 0) { state.phase = 1; }
-        else if (state.phase === 1) { state.phase = 2; state.maxReachedIndex = Math.max(state.maxReachedIndex, state.currentIndex); }
         else if (state.phase === 2) { state.phase = 3; }
         else if (state.phase === 3) {
-            if (state.currentIndex < state.questions.length - 1) { state.currentIndex++; state.phase = 1; }
-            else { state.phase = 4; }
+            const pool = state.currentType === 'quiz' ? state.quizPool : state.percentPool;
+            if (pool.length > 0) {
+                state.history.push({ type: state.currentType, q: pool[0].q, a: pool[0].a });
+                pool.shift();
+            }
+            if (state.quizPool.length === 0 && state.percentPool.length === 0) { state.phase = 4; }
+            else { state.currentIndex++; state.phase = 1; }
         }
         saveState();
         updateDisplay();
@@ -196,9 +201,16 @@
         }
         else if (state.phase === 2) { state.phase = 1; }
         else if (state.phase === 3) { state.phase = 2; }
-        else if (state.phase === 4) { state.phase = 3; }
         saveState();
         updateDisplay();
+    }
+
+    function askFinish() {
+        showModal("全員ゴールしましたか？\n終了画面へ移動します。", () => {
+            state.phase = 4;
+            saveState();
+            updateDisplay();
+        });
     }
 
     function updateDisplay() {
@@ -206,33 +218,44 @@
         const contentEl = document.getElementById('content');
         const fqBtn = document.getElementById('force-quit-btn');
         const controls = document.getElementById('controls-area');
+        const nextBtn = document.getElementById('next-btn');
         const container = document.getElementById('display-container');
 
         contentEl.style.opacity = 0;
         setTimeout(() => {
             fqBtn.style.display = (state.phase === 1) ? "block" : "none";
             controls.style.display = (state.phase === 4) ? "none" : "flex";
+            nextBtn.style.visibility = (state.phase === 1) ? "hidden" : "visible";
 
             if (state.phase === 0) {
                 labelEl.innerText = "GAME START";
-                contentEl.innerHTML = "<div>生協すごろく</div><div>クイズマス</div>";
+                contentEl.innerHTML = "<div>生協すごろく</div>";
                 container.style.borderColor = "#f1c40f";
             } else if (state.phase === 1) {
                 labelEl.innerText = "READY";
-                contentEl.innerHTML = `<div>第 ${state.currentIndex + 1} 問</div>`;
+                contentEl.innerHTML = `
+                    <div style="margin-bottom:20px;">第 ${state.currentIndex + 1} 問</div>
+                    <div class="choice-container">
+                        <button class="choice-btn btn-quiz" onclick="selectType('quiz')">クイズマス</button>
+                        <button class="choice-btn btn-percent" onclick="selectType('percent')">パーセントマス</button>
+                    </div>
+                `;
                 container.style.borderColor = "#f1c40f";
             } else if (state.phase === 2) {
-                labelEl.innerText = `第 ${state.currentIndex + 1} 問：問題`;
-                contentEl.innerHTML = `<div>${state.questions[state.currentIndex].q}</div>`;
-                container.style.borderColor = "#3498db";
+                const pool = state.currentType === 'quiz' ? state.quizPool : state.percentPool;
+                const typeName = state.currentType === 'quiz' ? "クイズ" : "パーセント";
+                labelEl.innerText = `第 ${state.currentIndex + 1} 問：${typeName}`;
+                contentEl.innerHTML = `<div>${pool[0].q}</div>`;
+                container.style.borderColor = state.currentType === 'quiz' ? "#3498db" : "#9b59b6";
             } else if (state.phase === 3) {
+                const pool = state.currentType === 'quiz' ? state.quizPool : state.percentPool;
                 labelEl.innerText = `第 ${state.currentIndex + 1} 問：解答`;
-                contentEl.innerHTML = `<div>${state.questions[state.currentIndex].a}</div>`;
+                contentEl.innerHTML = `<div>${pool[0].a}</div>`;
                 container.style.borderColor = "#e74c3c";
             } else if (state.phase === 4) {
                 labelEl.innerText = "GOAL!!";
                 contentEl.innerHTML = `
-                    <div>おつかれさまでした！</div>
+                    <div>全行程が終了しました！</div>
                     <div style='font-size:1.1rem; color:#bdc3c7; margin-top:30px;' onclick='toggleHistory()'>[ 問題一覧を確認する ]</div>
                 `;
                 container.style.borderColor = "#2ecc71";
@@ -241,33 +264,57 @@
         }, 50);
     }
 
+    function showModal(msg, onConfirm) {
+        document.getElementById('modal-msg').innerText = msg;
+        const confirmBtn = document.getElementById('modal-confirm-btn');
+        confirmBtn.onclick = () => { onConfirm(); closeModal(); };
+        document.getElementById('custom-modal').style.display = 'flex';
+    }
+    function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
+
+    // ★履歴画面の生成ロジック（未出題分を復活）
     function toggleHistory() {
         const overlay = document.getElementById('history-overlay');
         const list = document.getElementById('history-list');
         list.innerHTML = "";
+        
+        let html = "";
 
-        let solvedHTML = '<div class="history-section-title">【出題した問題】</div>';
-        let remainingHTML = '<div class="history-section-title">【未出題の問題（参考）】</div>';
-
-        // どこまで出題したかの境界（現在表示中の問題が解答済みならそれも含む）
-        const limit = state.maxReachedIndex + 1;
-
-        state.questions.forEach((item, i) => {
-            const itemHTML = `
-                <div class="history-item">
-                    <div class="history-q">第 ${i+1} 問：${item.q}</div>
-                    <div class="history-a">正解：${item.a}</div>
-                </div>`;
-            
-            if (i < limit) { solvedHTML += itemHTML; }
-            else { remainingHTML += itemHTML; }
+        // 1. 出題済み
+        html += '<div class="history-section-title">【出題した問題】</div>';
+        if (state.history.length === 0) html += "<div style='color:#7f8c8d;'>まだありません</div>";
+        state.history.forEach((item, i) => {
+            const typeLabel = item.type === 'quiz' ? '[クイズ]' : '[パーセント]';
+            html += `<div class="history-item"><div class="history-q">${i+1}. ${typeLabel} ${item.q}</div><div class="history-a">正解：${item.a}</div></div>`;
         });
 
-        list.innerHTML = solvedHTML + remainingHTML;
+        // 2. 未出題：クイズ
+        html += '<div class="history-section-title">【未出題のクイズ】</div>';
+        if (state.quizPool.length === 0) html += "<div style='color:#7f8c8d;'>すべて出題済み</div>";
+        state.quizPool.forEach((item) => {
+            html += `<div class="history-item"><div class="history-q">${item.q}</div><div class="history-a">正解：${item.a}</div></div>`;
+        });
+
+        // 3. 未出題：パーセント
+        html += '<div class="history-section-title">【未出題のパーセント】</div>';
+        if (state.percentPool.length === 0) html += "<div style='color:#7f8c8d;'>すべて出題済み</div>";
+        state.percentPool.forEach((item) => {
+            html += `<div class="history-item"><div class="history-q">${item.q}</div><div class="history-a">正解：${item.a}</div></div>`;
+        });
+
+        list.innerHTML = html;
         overlay.style.display = "flex";
     }
 
     function closeHistory() { document.getElementById('history-overlay').style.display = "none"; }
+    
+    function askReset(e) {
+        e.stopPropagation();
+        showModal("リセットして最初からやり直しますか？", () => {
+            localStorage.removeItem('seikyo_sugoroku_final');
+            location.reload();
+        });
+    }
 
     init();
 </script>
