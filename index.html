@@ -26,21 +26,33 @@
             position: relative; overflow: hidden; transition: opacity 0.1s ease-in;
         }
         
-        .choice-container { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 300px; margin-top: 10px; }
-        .choice-btn {
-            padding: 18px; border-radius: 15px; border: none; color: white;
-            font-size: 1.4rem; font-weight: bold; cursor: pointer; transition: transform 0.1s;
+        /* ボタンコンテナの調整 */
+        .choice-container { 
+            display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 320px; margin-top: 10px;
+            align-items: stretch; /* 子要素（ボタン）の幅を揃える */
         }
+        .choice-btn {
+            flex: 1; /* 高さを均等にする */
+            padding: 15px; border-radius: 15px; border: none; color: white;
+            font-size: 1.3rem; font-weight: bold; cursor: pointer; transition: transform 0.1s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; /* 垂直中央揃え */
+            min-height: 80px; line-height: 1.2;
+        }
+        /* 品切れ用補足テキストのサイズ */
+        .choice-btn span { font-size: 0.75rem; opacity: 0.9; margin-top: 4px; font-weight: normal; display: block; }
+        
         .choice-btn:active { transform: scale(0.95); opacity: 0.8; }
         .btn-quiz { background-color: #3498db; box-shadow: 0 4px #2980b9; }
         .btn-percent { background-color: #9b59b6; box-shadow: 0 4px #8e44ad; }
+        .btn-empty { background-color: #7f8c8d !important; box-shadow: 0 4px #666 !important; opacity: 0.7; }
 
         @media (min-width: 768px) {
             .label { font-size: 2rem; height: 3.5rem; }
             .content { font-size: 3.5rem; min-height: 250px; }
             #display-container { border-width: 10px; padding: 50px; min-height: 450px; }
-            .choice-container { max-width: 500px; flex-direction: row; }
-            .choice-btn { flex: 1; font-size: 2rem; }
+            .choice-container { max-width: 650px; flex-direction: row; }
+            .choice-btn { font-size: 1.6rem; min-height: 120px; }
+            .choice-btn span { font-size: 0.9rem; }
         }
 
         .controls {
@@ -59,22 +71,14 @@
             font-size: 0.9rem; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        #custom-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 3000;
-        }
+        #custom-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 3000; }
         .modal-card { background: #34495e; padding: 30px; border-radius: 20px; border: 4px solid #f1c40f; width: 80%; max-width: 400px; }
-        .modal-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 30px; line-height: 1.5; color: white; }
+        .modal-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 30px; line-height: 1.5; color: white; text-align: center;}
         .modal-btns { display: flex; gap: 15px; }
         .m-btn { flex: 1; padding: 15px; border: none; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; }
         .m-ok { background: #2ecc71; color: white; }
         .m-cancel { background: #95a5a6; color: white; }
-
-        #history-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); display: none; flex-direction: column;
-            padding: 25px; box-sizing: border-box; overflow-y: auto; z-index: 2500;
-        }
+        #history-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; padding: 25px; box-sizing: border-box; overflow-y: auto; z-index: 2500; }
         .history-section-title { font-size: 1.4rem; color: #f1c40f; margin: 30px 0 15px; text-align: left; border-bottom: 2px solid #f1c40f; padding-bottom: 5px; }
         .history-item { text-align: left; border-left: 4px solid #7f8c8d; padding-left: 10px; margin-bottom: 20px; }
         .history-q { font-size: 1rem; color: #bdc3c7; }
@@ -113,6 +117,7 @@
 </div>
 
 <script>
+    // データの変更なし
     const quizData = [
         { q: "マッチとライター。先に発明されたのはどちらでしょう？", a: "ライター" },
         { q: "不燃性のガスであるため飛行機のタイヤにも採用されている、大気中で最も多い気体は何でしょう？", a: "窒素" },
@@ -147,9 +152,9 @@
 
     let state = { quizPool: [], percentPool: [], history: [], currentIndex: 0, phase: 0, currentType: 'quiz' };
 
-    function saveState() { localStorage.setItem('seikyo_sugoroku_final', JSON.stringify(state)); }
+    function saveState() { localStorage.setItem('seikyo_sugoroku_final_v2', JSON.stringify(state)); }
     function loadState() {
-        const saved = localStorage.getItem('seikyo_sugoroku_final');
+        const saved = localStorage.getItem('seikyo_sugoroku_final_v2');
         if (saved) { state = JSON.parse(saved); return true; }
         return false;
     }
@@ -172,10 +177,14 @@
     }
 
     function selectType(type) {
-        state.currentType = type;
-        state.phase = 2; 
-        saveState();
-        updateDisplay();
+        let targetPool = type === 'quiz' ? state.quizPool : state.percentPool;
+        if (targetPool.length === 0) {
+            const otherType = type === 'quiz' ? 'percent' : 'quiz';
+            const otherPool = otherType === 'quiz' ? state.quizPool : state.percentPool;
+            if (otherPool.length > 0) { state.currentType = otherType; }
+            else { state.phase = 4; saveState(); updateDisplay(); return; }
+        } else { state.currentType = type; }
+        state.phase = 2; saveState(); updateDisplay();
     }
 
     function handleNext() {
@@ -190,8 +199,7 @@
             if (state.quizPool.length === 0 && state.percentPool.length === 0) { state.phase = 4; }
             else { state.currentIndex++; state.phase = 1; }
         }
-        saveState();
-        updateDisplay();
+        saveState(); updateDisplay();
     }
 
     function handleBack() {
@@ -201,15 +209,12 @@
         }
         else if (state.phase === 2) { state.phase = 1; }
         else if (state.phase === 3) { state.phase = 2; }
-        saveState();
-        updateDisplay();
+        saveState(); updateDisplay();
     }
 
     function askFinish() {
         showModal("全員ゴールしましたか？\n終了画面へ移動します。", () => {
-            state.phase = 4;
-            saveState();
-            updateDisplay();
+            state.phase = 4; saveState(); updateDisplay();
         });
     }
 
@@ -233,11 +238,18 @@
                 container.style.borderColor = "#f1c40f";
             } else if (state.phase === 1) {
                 labelEl.innerText = "READY";
+                
+                const qEmpty = state.quizPool.length === 0;
+                const pEmpty = state.percentPool.length === 0;
+                
+                const qBtnHtml = qEmpty ? "クイズマス<span>(品切れのためパーセントが出題されます)</span>" : "クイズマス";
+                const pBtnHtml = pEmpty ? "パーセントマス<span>(品切れのためクイズが出題されます)</span>" : "パーセントマス";
+
                 contentEl.innerHTML = `
                     <div style="margin-bottom:20px;">第 ${state.currentIndex + 1} 問</div>
                     <div class="choice-container">
-                        <button class="choice-btn btn-quiz" onclick="selectType('quiz')">クイズマス</button>
-                        <button class="choice-btn btn-percent" onclick="selectType('percent')">パーセントマス</button>
+                        <button class="choice-btn btn-quiz ${qEmpty ? 'btn-empty' : ''}" onclick="selectType('quiz')">${qBtnHtml}</button>
+                        <button class="choice-btn btn-percent ${pEmpty ? 'btn-empty' : ''}" onclick="selectType('percent')">${pBtnHtml}</button>
                     </div>
                 `;
                 container.style.borderColor = "#f1c40f";
@@ -272,46 +284,29 @@
     }
     function closeModal() { document.getElementById('custom-modal').style.display = 'none'; }
 
-    // ★履歴画面の生成ロジック（未出題分を復活）
     function toggleHistory() {
         const overlay = document.getElementById('history-overlay');
         const list = document.getElementById('history-list');
         list.innerHTML = "";
-        
         let html = "";
-
-        // 1. 出題済み
         html += '<div class="history-section-title">【出題した問題】</div>';
         if (state.history.length === 0) html += "<div style='color:#7f8c8d;'>まだありません</div>";
         state.history.forEach((item, i) => {
             const typeLabel = item.type === 'quiz' ? '[クイズ]' : '[パーセント]';
             html += `<div class="history-item"><div class="history-q">${i+1}. ${typeLabel} ${item.q}</div><div class="history-a">正解：${item.a}</div></div>`;
         });
-
-        // 2. 未出題：クイズ
         html += '<div class="history-section-title">【未出題のクイズ】</div>';
-        if (state.quizPool.length === 0) html += "<div style='color:#7f8c8d;'>すべて出題済み</div>";
-        state.quizPool.forEach((item) => {
-            html += `<div class="history-item"><div class="history-q">${item.q}</div><div class="history-a">正解：${item.a}</div></div>`;
-        });
-
-        // 3. 未出題：パーセント
+        state.quizPool.forEach((item) => { html += `<div class="history-item"><div class="history-q">${item.q}</div><div class="history-a">正解：${item.a}</div></div>`; });
         html += '<div class="history-section-title">【未出題のパーセント】</div>';
-        if (state.percentPool.length === 0) html += "<div style='color:#7f8c8d;'>すべて出題済み</div>";
-        state.percentPool.forEach((item) => {
-            html += `<div class="history-item"><div class="history-q">${item.q}</div><div class="history-a">正解：${item.a}</div></div>`;
-        });
-
+        state.percentPool.forEach((item) => { html += `<div class="history-item"><div class="history-q">${item.q}</div><div class="history-a">正解：${item.a}</div></div>`; });
         list.innerHTML = html;
         overlay.style.display = "flex";
     }
-
     function closeHistory() { document.getElementById('history-overlay').style.display = "none"; }
-    
     function askReset(e) {
         e.stopPropagation();
         showModal("リセットして最初からやり直しますか？", () => {
-            localStorage.removeItem('seikyo_sugoroku_final');
+            localStorage.removeItem('seikyo_sugoroku_final_v2');
             location.reload();
         });
     }
